@@ -85,11 +85,14 @@ type Deps struct {
 // checks, its metrics on /api/metrics for Prometheus, and its answers to
 // core's questions on /internal/v1/programs/, which the ingress never routes,
 // to callers with deps.Token. A failure to set up the Canvas caches in NATS is
-// an error.
+// an error. Without NATS (the tests) Canvas isn't cached.
 func NewHandler(deps Deps, requireLogin func(http.Handler) http.Handler) (http.Handler, error) {
-	buckets, err := canvasBuckets(deps.NATS)
-	if err != nil {
-		return nil, err
+	var buckets map[string]nats.KeyValue
+	if deps.NATS != nil {
+		var err error
+		if buckets, err = canvasBuckets(deps.NATS); err != nil {
+			return nil, err
+		}
 	}
 	srv := &server{
 		store:             deps.DB,

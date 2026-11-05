@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -45,10 +44,6 @@ import (
 //	go test ./internal/handlers -run 'TestRoute' -update
 
 var updateGolden = flag.Bool("update", false, "rewrite the saved responses in testdata/routes")
-
-// testClaimsHeader carries the caller's identity.Claims as JSON, in place of
-// the login session the tests don't have, as core's X-Test-Claims did.
-const testClaimsHeader = "X-Test-Claims"
 
 // The live Canvas and Essential Education providers, and the IDs the Programs
 // routes give their programs and classes.
@@ -148,13 +143,7 @@ func (w programsWorld) claims(u *models.User) *identity.Claims {
 //   - Program 3 is inactive and archived. Program 4 is offered at South only.
 func seedPrograms(t *testing.T, db *database.DB, lms *httptest.Server) programsWorld {
 	t.Helper()
-	// Core's seed ran with no system_batch user, so the SuperAdmin's creator
-	// is the 99999 it falls back to.
-	now := time.Now()
-	require.NoError(t, db.Exec(`INSERT INTO users (id, username, name_first, name_last, email, role, facility_id, create_user_id, created_at, updated_at)
-		VALUES (1, 'SuperAdmin', 'Super', 'Admin', 'admin@unlocked.v2', 'system_admin', 1, 99999, ?, ?)`, now, now).Error)
-	require.NoError(t, db.Exec(`INSERT INTO facilities (id, name, timezone, create_user_id, created_at, updated_at)
-		VALUES (1, 'Default', 'America/Chicago', 1, ?, ?)`, now, now).Error)
+	testutil.SeedCore(t, db.DB)
 
 	var w programsWorld
 	w.north = &models.Facility{Name: "North", Timezone: "America/Chicago"}
@@ -792,20 +781,14 @@ func newRouteTest(t *testing.T) (*httptest.Server, *http.Client, *server, *httpt
 	srv := &server{
 		store:             database.NewDB(gdb),
 		Client:            lms.Client(),
-		providerPlatforms: startFakeProviderPlatforms(t, gdb),
-		facilityFeatures:  allFeaturesOn{},
+		providerPlatforms: testutil.StartFakeProviderPlatforms(t, gdb),
+		facilityFeatures:  testutil.FeaturesOn{},
 	}
-	ts := httptest.NewServer(srv.newRouter(testLogin))
+	ts := httptest.NewServer(srv.newRouter(testutil.Login))
 	t.Cleanup(ts.Close)
 	client := &http.Client{CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
 	return ts, client, srv, lms
 }
-
-// allFeaturesOn turns every feature on at every facility, as core's test
-// database did.
-type allFeaturesOn struct{}
-
-func (allFeaturesOn) Enabled(context.Context, uint, features.Access) (bool, error) { return true, nil }
 
 // newCoreClient is how core asks srv, over HTTP with the contracts client.
 func newCoreClient(t *testing.T, srv *server) *programs.Client {
@@ -822,19 +805,6 @@ func deactivate(t *testing.T, db *database.DB, core *programs.Client, userID uin
 	t.Helper()
 	require.NoError(t, db.Exec(`UPDATE users SET deactivated_at = ? WHERE id = ?`, time.Now(), userID).Error)
 	require.NoError(t, core.WithdrawEnrollments(t.Context(), userID))
-}
-
-// testLogin passes the caller in testClaimsHeader, as identity.SessionChecker
-// passes a logged-in caller.
-func testLogin(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		var c identity.Claims
-		if err := json.Unmarshal([]byte(r.Header.Get(testClaimsHeader)), &c); err != nil {
-			http.Error(w, "test claims: "+err.Error(), http.StatusUnauthorized)
-			return
-		}
-		next.ServeHTTP(w, r.WithContext(identity.NewContext(r.Context(), &c)))
-	})
 }
 
 // routeResponse is a route's answer.
@@ -856,7 +826,7 @@ func call(t *testing.T, ts *httptest.Server, client *http.Client, c *identity.Cl
 	require.NoError(t, err)
 	claims, err := json.Marshal(c)
 	require.NoError(t, err)
-	req.Header.Set(testClaimsHeader, string(claims))
+	req.Header.Set(testutil.ClaimsHeader, string(claims))
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := client.Do(req)
 	require.NoError(t, err)

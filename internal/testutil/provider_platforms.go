@@ -1,4 +1,4 @@
-package handlers
+package testutil
 
 import (
 	"context"
@@ -12,7 +12,7 @@ import (
 const fakeProviderPlatformsToken = "test-service-token"
 
 // fakeProviderPlatforms stands in for the Provider Platforms service. It
-// answers Programs' questions from the two tables startFakeProviderPlatforms
+// answers Programs' questions from the two tables StartFakeProviderPlatforms
 // creates, so the Canvas and Essential Education screens run against real
 // provider rows without that service. Everything else panics, which is how a
 // test finds out it needs more.
@@ -21,10 +21,10 @@ type fakeProviderPlatforms struct {
 	db *gorm.DB
 }
 
-// startFakeProviderPlatforms creates the fake's tables in db and serves the
+// StartFakeProviderPlatforms creates the fake's tables in db and serves the
 // fake the way the service is served, and returns the client Programs asks it
 // with.
-func startFakeProviderPlatforms(t *testing.T, db *gorm.DB) *providerplatforms.Client {
+func StartFakeProviderPlatforms(t *testing.T, db *gorm.DB) *providerplatforms.Client {
 	t.Helper()
 	f := &fakeProviderPlatforms{db: db}
 	for _, ddl := range []string{

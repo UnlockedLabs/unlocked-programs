@@ -57,3 +57,19 @@ func tables() []any {
 		&models.Room{},
 	}
 }
+
+// SeedCore adds what core's test database started with: its SuperAdmin (user
+// 1) at its Default facility (1). Core's seed ran with no system_batch user,
+// so the SuperAdmin's creator is the 99999 it falls back to.
+func SeedCore(t *testing.T, db *gorm.DB) {
+	t.Helper()
+	now := time.Now()
+	if err := db.Exec(`INSERT INTO users (id, username, name_first, name_last, email, role, facility_id, create_user_id, created_at, updated_at)
+		VALUES (1, 'SuperAdmin', 'Super', 'Admin', 'admin@unlocked.v2', 'system_admin', 1, 99999, ?, ?)`, now, now).Error; err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Exec(`INSERT INTO facilities (id, name, timezone, create_user_id, created_at, updated_at)
+		VALUES (1, 'Default', 'America/Chicago', 1, ?, ?)`, now, now).Error; err != nil {
+		t.Fatal(err)
+	}
+}
