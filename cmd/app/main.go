@@ -1,7 +1,8 @@
 // Command app is Programs' one binary: "app serve" runs the API, "app worker"
 // runs class activation on its schedule, and "app migrate" migrates the
-// database. For a local database, "app migrate-reset" rolls back the
-// migrations. serve and worker stop cleanly on SIGINT or SIGTERM.
+// database. For a local database, "app seed-dev" adds sample data and
+// "app migrate-reset" rolls back the migrations. serve and worker stop cleanly
+// on SIGINT or SIGTERM.
 package main
 
 import (
@@ -18,7 +19,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-const usage = "usage: app serve | app worker | app migrate | app migrate-reset"
+const usage = "usage: app serve | app worker | app migrate | app seed-dev | app migrate-reset"
 
 func main() {
 	initLogging()
@@ -47,6 +48,8 @@ func run(ctx context.Context, args []string) error {
 		return work(ctx)
 	case "migrate":
 		return migrate(ctx)
+	case "seed-dev":
+		return seedDev(ctx)
 	case "migrate-reset":
 		return migrateReset(ctx)
 	default:
@@ -76,6 +79,20 @@ func migrate(ctx context.Context) error {
 	}
 	log.Info("Migrations completed successfully")
 	return nil
+}
+
+// seedDev adds sample data for core's dev facilities and residents. It runs
+// only with APP_ENV=dev, so it can never add sample data to a real site.
+func seedDev(ctx context.Context) error {
+	if os.Getenv("APP_ENV") != "dev" {
+		return errors.New("seed-dev adds sample data, so it runs only with APP_ENV=dev")
+	}
+	db, err := connectDB(ctx)
+	if err != nil {
+		return err
+	}
+	defer closeDB(db)
+	return db.SeedDev(ctx)
 }
 
 // migrateReset rolls back Programs' migrations, for core's
