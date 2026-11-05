@@ -794,7 +794,7 @@ func (db *DB) GetFacilityCalendar(args *models.QueryContext, dtRng *models.DateR
 		}
 
 		//daylight saving time fix (VIP) prevents the time shift
-		canonicalHour, canonicalMinute := getCanonicalHourAndMinute(occurrences, args.Timezone)
+		canonicalHour, canonicalMinute := GetCanonicalHourAndMinute(occurrences, args.Timezone)
 		overrides := overrideEventMap[event.ID]
 		var (
 			isCancelled, isRescheduled, isRoomOrInstructorOverride bool
@@ -963,8 +963,8 @@ func (db *DB) GetFacilityCalendar(args *models.QueryContext, dtRng *models.DateR
 	return facilityEvents, nil
 }
 
-// returns the hour and minute from the first occurrence within the slice of time.Time instances
-func getCanonicalHourAndMinute(occurrences []time.Time, timezone string) (int, int) {
+// GetCanonicalHourAndMinute returns the hour and minute from the first occurrence within the slice of time.Time instances
+func GetCanonicalHourAndMinute(occurrences []time.Time, timezone string) (int, int) {
 	var canonicalHour, canonicalMinute int
 	if len(occurrences) > 0 {
 		firstOccurrence := occurrences[0]

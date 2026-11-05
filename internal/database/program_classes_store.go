@@ -752,7 +752,7 @@ func (db *DB) BulkCancelSessions(req *models.BulkCancelSessionsRequest, facility
 		}
 		occurrences := rule.Between(start, end, true)
 		firstOccurrence := rule.After(time.Time{}, false)
-		canonicalHour, canonicalMinute := getCanonicalHourAndMinute([]time.Time{firstOccurrence}, claims.GetTimezone())
+		canonicalHour, canonicalMinute := GetCanonicalHourAndMinute([]time.Time{firstOccurrence}, claims.GetTimezone())
 		userLocation, _ := time.LoadLocation(claims.GetTimezone())
 		for _, occurrence := range occurrences {
 			consistentOccurrence := time.Date(
