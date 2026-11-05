@@ -13,9 +13,14 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/UnlockedLabs/unlocked-contracts/features"
+	"github.com/UnlockedLabs/unlocked-contracts/identity"
+	"github.com/UnlockedLabs/unlocked-contracts/providerplatforms"
 	"github.com/UnlockedLabs/unlocked-programs/internal/database"
+	"github.com/UnlockedLabs/unlocked-programs/internal/handlers"
 	"github.com/UnlockedLabs/unlocked-programs/internal/server"
 	"github.com/UnlockedLabs/unlocked-programs/internal/tasks"
+	"github.com/nats-io/nats.go"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -43,7 +48,7 @@ func run(ctx context.Context, args []string) error {
 	}
 	switch args[0] {
 	case "serve":
-		return server.Serve(ctx, envOr("ADDR", ":8080"), os.Getenv("PATH_PREFIX"), server.VersionFromEnv())
+		return serve(ctx)
 	case "worker":
 		return work(ctx)
 	case "migrate":
@@ -55,6 +60,46 @@ func run(ctx context.Context, args []string) error {
 	default:
 		return fmt.Errorf("unknown command %q: %s", args[0], usage)
 	}
+}
+
+// serve runs the API once the database is migrated. KRATOS_PUBLIC_URL says
+// whether a login session is active, and core, at APP_URL, who its user is and
+// which features are on at a facility. Core asks its questions with
+// PROGRAMS_TOKEN, and Programs asks Provider Platforms, at
+// PROVIDER_PLATFORMS_URL, with PROVIDER_PLATFORMS_TOKEN.
+func serve(ctx context.Context) error {
+	token := os.Getenv("PROGRAMS_TOKEN")
+	if token == "" {
+		return errors.New("PROGRAMS_TOKEN must be set: it's the secret core asks Programs' questions with")
+	}
+	ppToken := os.Getenv("PROVIDER_PLATFORMS_TOKEN")
+	if ppToken == "" {
+		return errors.New("PROVIDER_PLATFORMS_TOKEN must be set: it's the secret Programs asks Provider Platforms with")
+	}
+	db, err := connectDB(ctx)
+	if err != nil {
+		return err
+	}
+	defer closeDB(db)
+	nc, err := nats.Connect(os.Getenv("NATS_URL"), nats.UserInfo(os.Getenv("NATS_USER"), os.Getenv("NATS_PASSWORD")))
+	if err != nil {
+		return fmt.Errorf("connect to NATS: %w", err)
+	}
+	defer nc.Close()
+	coreURL := os.Getenv("APP_URL")
+	sessions := identity.NewSessionChecker(os.Getenv("KRATOS_PUBLIC_URL"), coreURL, nil)
+	app, err := handlers.NewHandler(handlers.Deps{
+		DB:                db,
+		NATS:              nc,
+		ProviderPlatforms: providerplatforms.NewClient(envOr("PROVIDER_PLATFORMS_URL", "http://provider-platforms:8080"), ppToken, nil),
+		Features:          features.NewChecker(coreURL, nil),
+		Reports:           handlers.JasperReports{},
+		Token:             token,
+	}, sessions.Require)
+	if err != nil {
+		return err
+	}
+	return server.Serve(ctx, envOr("ADDR", ":8080"), os.Getenv("PATH_PREFIX"), server.VersionFromEnv(), app)
 }
 
 // work runs the worker once the database is migrated.
