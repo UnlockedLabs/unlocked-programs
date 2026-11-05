@@ -1,4 +1,3 @@
-// Package database is Programs' database: its migrations and every query.
 package database
 
 import (
@@ -10,16 +9,7 @@ import (
 	"github.com/UnlockedLabs/unlocked-programs/internal/models"
 	"github.com/go-playground/validator/v10"
 	log "github.com/sirupsen/logrus"
-	"gorm.io/gorm"
 )
-
-// DB is Programs' database connection, with its queries. The queries moved
-// from core unchanged (EN-194).
-type DB struct{ *gorm.DB }
-
-func NewDB(db *gorm.DB) *DB {
-	return &DB{db}
-}
 
 // Validate is the validator for Programs' models and requests.
 var Validate = sync.OnceValue(func() *validator.Validate {

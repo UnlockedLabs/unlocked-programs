@@ -10,7 +10,7 @@ RUN go mod download
 COPY . .
 RUN CGO_ENABLED=0 GOOS=linux GOFLAGS=-mod=readonly go build -trimpath -o /app ./cmd/app
 
-# One image runs both commands: `serve` (the default) and `worker`.
+# One image runs every command: `serve` (the default), `worker` and `migrate`.
 FROM gcr.io/distroless/static-debian12:nonroot
 
 # Reported by /api/version. CI passes the release version (or sha-<short>),
