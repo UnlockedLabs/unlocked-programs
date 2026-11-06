@@ -1,7 +1,6 @@
 // Package models is Programs' tables as Go types, the rows of core's tables
 // it reads and writes, and the shapes its routes read and answer with. The
-// JSON names are the ones core sent before the move (EN-194), so the frontend
-// sees no change.
+// JSON names are the ones core sent, so the frontend sees no change.
 package models
 
 import (

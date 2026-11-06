@@ -39,24 +39,11 @@ func (a programsAPI) TransferConflicts(ctx context.Context, userID, toFacilityID
 }
 
 func (a programsAPI) EndEnrollmentsForTransfer(ctx context.Context, userID, fromFacilityID uint) error {
-	return a.store.WithContext(ctx).Exec(`UPDATE program_class_enrollments AS pce SET enrollment_status = ?
-		FROM program_class_cohorts pc
-		WHERE pce.cohort_id = pc.id
-			AND pce.user_id = ?
-			AND pc.facility_id = ?
-			AND pce.enrollment_status = 'Enrolled'`,
-		"Incomplete: Transferred", userID, fromFacilityID).Error
+	return a.store.EndEnrollmentsForTransfer(ctx, userID, fromFacilityID)
 }
 
-// WithdrawEnrollments updates through the model, so the enrollment's
-// BeforeUpdate hook sets enrollment_ended_at.
 func (a programsAPI) WithdrawEnrollments(ctx context.Context, userID uint) error {
-	return a.store.WithContext(ctx).Model(&models.ProgramClassEnrollment{}).
-		Where("user_id = ? AND enrollment_status = ?", userID, models.Enrolled).
-		Updates(map[string]any{
-			"enrollment_status": models.EnrollmentIncompleteWithdrawn,
-			"change_reason":     "Account deactivated",
-		}).Error
+	return a.store.WithdrawEnrollments(ctx, userID)
 }
 
 func (a programsAPI) ResidentPrograms(ctx context.Context, userID uint) ([]api.ResidentProgramClassInfo, error) {

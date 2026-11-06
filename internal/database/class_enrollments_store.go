@@ -1,6 +1,7 @@
 package database
 
 import (
+	"context"
 	"fmt"
 	"strconv"
 	"strings"
@@ -259,6 +260,36 @@ func (db *DB) UpdateProgramClassEnrollments(classId int, userIds []int, status m
 		Set("cohort_id", classId).
 		Updates(updates).Error; err != nil {
 		return newUpdateDBError(err, "class enrollment status")
+	}
+	return nil
+}
+
+// EndEnrollmentsForTransfer marks the user's current enrollments at
+// fromFacilityID as ended by a transfer.
+func (db *DB) EndEnrollmentsForTransfer(ctx context.Context, userID, fromFacilityID uint) error {
+	if err := db.WithContext(ctx).Exec(`UPDATE program_class_enrollments AS pce SET enrollment_status = ?
+		FROM program_class_cohorts pc
+		WHERE pce.cohort_id = pc.id
+			AND pce.user_id = ?
+			AND pc.facility_id = ?
+			AND pce.enrollment_status = 'Enrolled'`,
+		"Incomplete: Transferred", userID, fromFacilityID).Error; err != nil {
+		return newUpdateDBError(err, "program_class_enrollments")
+	}
+	return nil
+}
+
+// WithdrawEnrollments marks the user's current enrollments as withdrawn,
+// because their account was deactivated. It updates through the model, so the
+// enrollment's BeforeUpdate hook sets enrollment_ended_at.
+func (db *DB) WithdrawEnrollments(ctx context.Context, userID uint) error {
+	if err := db.WithContext(ctx).Model(&models.ProgramClassEnrollment{}).
+		Where("user_id = ? AND enrollment_status = ?", userID, models.Enrolled).
+		Updates(map[string]any{
+			"enrollment_status": models.EnrollmentIncompleteWithdrawn,
+			"change_reason":     "Account deactivated",
+		}).Error; err != nil {
+		return newUpdateDBError(err, "program_class_enrollments")
 	}
 	return nil
 }

@@ -1,7 +1,7 @@
 -- +goose Up
 -- change_log_entries is Programs' change log (programs, classes, sessions and
 -- enrollments) and no other service uses it, so it moves into the programs
--- schema with the rest of Programs' tables (EN-207).
+-- schema with the rest of Programs' tables.
 --
 -- SET SCHEMA keeps the rows, indexes, the foreign key to users, and the id
 -- sequence, which moves with the table. It keeps the grants too: the programs

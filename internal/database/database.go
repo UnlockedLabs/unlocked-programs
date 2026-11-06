@@ -19,7 +19,7 @@ import (
 )
 
 // DB is Programs' database connection, with its queries. The queries moved
-// from core unchanged (EN-194).
+// from core unchanged.
 type DB struct{ *gorm.DB }
 
 func NewDB(db *gorm.DB) *DB {

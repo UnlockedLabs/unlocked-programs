@@ -28,10 +28,11 @@ ENV GIT_BRANCH=$GIT_BRANCH
 
 # The base image already has an /app directory.
 COPY --from=builder /app /programs
-COPY templates /templates
+# The templates belong to the user serve runs as, so a report can recompile a
+# template JasperStarter can't load and retry.
+COPY --chown=65532:65532 templates /templates
 
-# The distroless nonroot user, as Open Content runs. Reports write their
-# working files under /tmp.
+# A nonroot user. Reports write their working files under /tmp.
 USER 65532:65532
 EXPOSE 8080
 ENTRYPOINT ["/programs"]
