@@ -60,13 +60,13 @@ func TestInternalAPI(t *testing.T) {
 	for range 2 {
 		require.NoError(t, core.EndEnrollmentsForTransfer(ctx, resident.ID, facility.ID))
 	}
-	assert.Equal(t, []models.ProgramEnrollmentStatus{"Incomplete: Transferred"}, status())
+	assert.Equal(t, []models.ProgramEnrollmentStatus{models.EnrollmentIncompleteTransfered}, status())
 
 	enroll()
 	for range 2 {
 		require.NoError(t, core.WithdrawEnrollments(ctx, resident.ID))
 	}
-	assert.Equal(t, []models.ProgramEnrollmentStatus{"Incomplete: Transferred", models.EnrollmentIncompleteWithdrawn}, status())
+	assert.Equal(t, []models.ProgramEnrollmentStatus{models.EnrollmentIncompleteTransfered, models.EnrollmentIncompleteWithdrawn}, status())
 
 	// A wrong token gets nothing.
 	_, err = programs.NewClient(ts.URL, "guess", nil).EnrolledUserIDs(ctx, class.ID)

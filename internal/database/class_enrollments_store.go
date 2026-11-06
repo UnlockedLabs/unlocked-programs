@@ -273,7 +273,7 @@ func (db *DB) EndEnrollmentsForTransfer(ctx context.Context, userID, fromFacilit
 			AND pce.user_id = ?
 			AND pc.facility_id = ?
 			AND pce.enrollment_status = 'Enrolled'`,
-		"Incomplete: Transferred", userID, fromFacilityID).Error; err != nil {
+		models.EnrollmentIncompleteTransfered, userID, fromFacilityID).Error; err != nil {
 		return newUpdateDBError(err, "program_class_enrollments")
 	}
 	return nil
