@@ -49,7 +49,8 @@ Laid out like Open Content:
 
 ## Run it locally
 
-Core's `make dev` builds and runs Programs from this checkout, next to core,
+Core's `make dev` builds and runs Programs next to core, from `main` on
+GitHub, or from this checkout when core's `.env` sets `PROGRAMS_DIR` to it,
 so most of the time that's all you need. To run it on its own you need Go
 1.26 and Docker, plus core's Postgres, NATS and Kratos, and the Provider
 Platforms service.
