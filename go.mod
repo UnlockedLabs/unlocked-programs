@@ -3,7 +3,7 @@ module github.com/UnlockedLabs/unlocked-programs
 go 1.26.10
 
 require (
-	github.com/UnlockedLabs/unlocked-contracts v0.4.1-0.20261105200604-ce44538defe6
+	github.com/UnlockedLabs/unlocked-contracts v0.5.0
 	github.com/evertonvps/go-jasper v0.0.0-20250309141606-9de98712f6fe
 	github.com/glebarez/sqlite v1.11.0
 	github.com/go-co-op/gocron/v2 v2.19.1
