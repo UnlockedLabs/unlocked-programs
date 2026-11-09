@@ -226,17 +226,24 @@ func (srv *server) attendanceInFacility(r *http.Request, claims *identity.Claims
 		Limit(1).Scan(&facID).Error == nil && claims.FacilityID == facID
 }
 
-// classesInFacility passes when a class in the ?id= list is at the caller's
-// facility.
+// classesInFacility passes when every class in the ?id= list is at the
+// caller's facility, or any facility for department and system admins. It
+// fails for any list classIDsFromQuery rejects.
 func (srv *server) classesInFacility(r *http.Request, claims *identity.Claims) bool {
-	var programClass models.ProgramClassCohort
-	err := srv.store.WithContext(r.Context()).
+	classIDs, err := classIDsFromQuery(r)
+	if err != nil {
+		return false
+	}
+	if claims.CanSwitchFacility() {
+		return true
+	}
+	slices.Sort(classIDs)
+	classIDs = slices.Compact(classIDs)
+	var count int64
+	return srv.store.WithContext(r.Context()).
 		Table("program_class_cohorts").
-		Select("facility_id").
-		Where("id IN (?)", r.URL.Query()["id"]).
-		Where("facility_id = ?", claims.FacilityID).
-		First(&programClass).Error
-	return err == nil
+		Where("id IN (?) AND facility_id = ?", classIDs, claims.FacilityID).
+		Count(&count).Error == nil && count == int64(len(classIDs))
 }
 
 // programInFacility passes when the program_id in the path is offered at the

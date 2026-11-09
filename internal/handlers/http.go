@@ -131,10 +131,6 @@ func (slog sLog) info(args ...any) {
 	logrus.WithFields(slog.f).Info(args...)
 }
 
-func (slog sLog) warn(args ...any) {
-	logrus.WithFields(slog.f).Warn(args...)
-}
-
 func (slog sLog) warnf(format string, args ...any) {
 	logrus.WithFields(slog.f).Warnf(format, args...)
 }

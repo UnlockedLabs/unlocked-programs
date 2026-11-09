@@ -531,9 +531,6 @@ func TestRouteAccess(t *testing.T) {
 		// adminAtFacility is admins of the resource's facility, and
 		// department and system admins.
 		adminAtFacility
-		// adminAtClaimsFacility is admins whose own facility holds the
-		// resource. Department admins are held to their facility too.
-		adminAtClaimsFacility
 		// deptAdminForAll is any admin, but only department and system
 		// admins may add all=true.
 		deptAdminForAll
@@ -591,7 +588,7 @@ func TestRouteAccess(t *testing.T) {
 		{http.MethodGet, "/api/program-classes/1/missing-attendance", "/api/program-classes/3/missing-attendance", adminAtFacility, true},
 		{http.MethodGet, "/api/program-classes/1/attendance-rate", "/api/program-classes/3/attendance-rate", adminAtFacility, true},
 		{http.MethodGet, "/api/program-classes/1/history", "/api/program-classes/3/history", adminAtFacility, true},
-		{http.MethodPatch, "/api/program-classes?id=1", "/api/program-classes?id=3", adminAtClaimsFacility, true},
+		{http.MethodPatch, "/api/program-classes?id=1&id=2", "/api/program-classes?id=1&id=3", adminAtFacility, true},
 		{http.MethodPatch, "/api/programs/1/classes/1", "/api/programs/1/classes/3", adminAtFacility, true},
 		{http.MethodDelete, "/api/program-classes/1", "/api/program-classes/3", adminAtFacility, true},
 		{http.MethodGet, "/api/program-classes/1/delete-check", "/api/program-classes/3/delete-check", adminAtFacility, true},
@@ -696,11 +693,6 @@ func TestRouteAccess(t *testing.T) {
 				passes(t, rt.method, rt.own, facAdmin)
 				notAllowed(t, rt.method, rt.other, facAdmin)
 				passes(t, rt.method, rt.other, deptAdmin)
-			case adminAtClaimsFacility:
-				notAdmin(t, rt.method, rt.own, resident)
-				passes(t, rt.method, rt.own, facAdmin)
-				notAllowed(t, rt.method, rt.other, facAdmin)
-				notAllowed(t, rt.method, rt.other, deptAdmin)
 			case deptAdminForAll:
 				notAllowed(t, rt.method, rt.own, resident)
 				passes(t, rt.method, rt.own, facAdmin)
@@ -721,6 +713,48 @@ func TestRouteAccess(t *testing.T) {
 				passes(t, rt.method, rt.own, resident)
 				notAllowed(t, rt.method, rt.own, noResidentPrograms(resident))
 				passes(t, rt.method, rt.own, noResidentPrograms(facAdmin))
+			}
+		})
+	}
+}
+
+// TestUpdateClassesFacility checks that the bulk class update changes the
+// listed classes only when the caller may change every one of them.
+func TestUpdateClassesFacility(t *testing.T) {
+	ts, client, srv, lms := newRouteTest(t)
+	w := seedPrograms(t, srv.store, lms)
+	facAdmin, deptAdmin := w.claims(w.facAdmin), w.claims(w.deptAdmin)
+
+	// The cases share one database. Each sets its own capacity, so a class
+	// has that capacity only if the case changed it.
+	tests := []struct {
+		name     string
+		claims   *identity.Claims
+		query    string
+		capacity int
+		status   int
+		changed  []uint
+	}{
+		{"own_classes", facAdmin, "id=1&id=2", 11, http.StatusOK, []uint{1, 2}},
+		{"own_class_twice", facAdmin, "id=1&id=1", 12, http.StatusOK, []uint{1}},
+		{"other_facility_class", facAdmin, "id=1&id=3", 13, http.StatusUnauthorized, nil},
+		{"missing_class", facAdmin, "id=1&id=999", 14, http.StatusUnauthorized, nil},
+		{"non_numeric_id", facAdmin, "id=1&id=abc", 15, http.StatusUnauthorized, nil},
+		{"no_ids", facAdmin, "", 16, http.StatusUnauthorized, nil},
+		{"statewide_admin_other_facility", deptAdmin, "id=3", 17, http.StatusOK, []uint{3}},
+		{"statewide_admin_non_numeric_id", deptAdmin, "id=3&id=abc", 18, http.StatusUnauthorized, nil},
+		{"statewide_admin_out_of_range_id", deptAdmin, "id=3&id=18446744073709551615", 19, http.StatusUnauthorized, nil},
+		{"statewide_admin_zero_id", deptAdmin, "id=3&id=0", 20, http.StatusUnauthorized, nil},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			resp := call(t, ts, client, tt.claims, http.MethodPatch, "/api/program-classes?"+tt.query,
+				map[string]any{"capacity": tt.capacity})
+			require.Equal(t, tt.status, resp.status, resp.body)
+			for _, id := range []uint{1, 2, 3} {
+				var capacity int
+				require.NoError(t, srv.store.Table("program_class_cohorts").Select("capacity").Where("id = ?", id).Scan(&capacity).Error)
+				require.Equal(t, slices.Contains(tt.changed, id), capacity == tt.capacity, "class %d capacity %d", id, capacity)
 			}
 		})
 	}
