@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/UnlockedLabs/unlocked-programs/internal/models"
 	"github.com/UnlockedLabs/unlocked-programs/internal/testutil"
@@ -138,4 +139,31 @@ func TestProgramStatusFailedUpdateReleasesTransaction(t *testing.T) {
 	sqlDB, err := srv.store.DB.DB()
 	require.NoError(t, err)
 	require.Zero(t, sqlDB.Stats().InUse, "the failed update left its transaction open")
+}
+
+func TestArchiveIgnoresDeletedCohorts(t *testing.T) {
+	ts, client, srv, lms := newRouteTest(t)
+	w := seedPrograms(t, srv.store, lms)
+	admin := w.claims(w.facAdmin)
+	require.NoError(t, srv.store.Exec(`UPDATE program_class_cohorts SET deleted_at = ? WHERE id = 2`, time.Now()).Error)
+
+	check := call(t, ts, client, admin, http.MethodGet, "/api/programs/2/archive-check", nil)
+	require.Equal(t, http.StatusOK, check.status, check.body)
+	var checked struct {
+		Data struct {
+			Facilities []string `json:"facilities"`
+		} `json:"data"`
+	}
+	require.NoError(t, json.Unmarshal([]byte(check.body), &checked))
+	require.Empty(t, checked.Data.Facilities)
+
+	archive := call(t, ts, client, admin, http.MethodPatch, fmt.Sprintf(programStatusPath, 2), map[string]any{"archived_at": "2026-02-01T00:00:00Z"})
+	require.Equal(t, http.StatusOK, archive.status, archive.body)
+	var archived struct {
+		Data struct {
+			Updated bool `json:"updated"`
+		} `json:"data"`
+	}
+	require.NoError(t, json.Unmarshal([]byte(archive.body), &archived))
+	require.True(t, archived.Data.Updated, archive.body)
 }

@@ -108,7 +108,7 @@ func (db *DB) GetActiveClassFacilityIDs(ctx context.Context, id int) ([]int, err
 
 func (db *DB) GetProgramActiveClassFacilities(ctx context.Context, id uint) ([]string, error) {
 	var facilities []string
-	if err := db.WithContext(ctx).Table("program_class_cohorts").
+	if err := db.WithContext(ctx).Model(&models.ProgramClassCohort{}).
 		Joins("JOIN facilities ON facilities.id = program_class_cohorts.facility_id").
 		Where("program_class_cohorts.program_id = ? AND program_class_cohorts.status IN (?, ?) AND program_class_cohorts.archived_at IS NULL", id,
 			models.Active, models.Scheduled).
