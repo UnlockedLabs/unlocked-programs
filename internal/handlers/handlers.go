@@ -226,17 +226,32 @@ func (srv *server) attendanceInFacility(r *http.Request, claims *identity.Claims
 		Limit(1).Scan(&facID).Error == nil && claims.FacilityID == facID
 }
 
-// classesInFacility passes when a class in the ?id= list is at the caller's
-// facility.
+// classesInFacility passes when every class in the ?id= list is at the
+// caller's facility, or any facility for department and system admins. An
+// empty list or a non-numeric ID fails.
 func (srv *server) classesInFacility(r *http.Request, claims *identity.Claims) bool {
-	var programClass models.ProgramClassCohort
-	err := srv.store.WithContext(r.Context()).
+	ids := r.URL.Query()["id"]
+	if len(ids) == 0 {
+		return false
+	}
+	classIDs := make([]uint64, 0, len(ids))
+	for _, id := range ids {
+		classID, err := strconv.ParseUint(id, 10, 64)
+		if err != nil {
+			return false
+		}
+		classIDs = append(classIDs, classID)
+	}
+	if claims.CanSwitchFacility() {
+		return true
+	}
+	slices.Sort(classIDs)
+	classIDs = slices.Compact(classIDs)
+	var count int64
+	return srv.store.WithContext(r.Context()).
 		Table("program_class_cohorts").
-		Select("facility_id").
-		Where("id IN (?)", r.URL.Query()["id"]).
-		Where("facility_id = ?", claims.FacilityID).
-		First(&programClass).Error
-	return err == nil
+		Where("id IN (?) AND facility_id = ?", classIDs, claims.FacilityID).
+		Count(&count).Error == nil && count == int64(len(classIDs))
 }
 
 // programInFacility passes when the program_id in the path is offered at the
