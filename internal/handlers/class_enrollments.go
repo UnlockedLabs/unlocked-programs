@@ -121,20 +121,6 @@ func (srv *server) handleEnrollUsersInClass(w http.ResponseWriter, r *http.Reque
 	return writeJsonResponse(w, http.StatusCreated, response)
 }
 
-func (srv *server) handleDeleteProgramClassEnrollments(w http.ResponseWriter, r *http.Request, log sLog) error {
-	id, err := strconv.Atoi(r.PathValue("cohort_id"))
-	if err != nil {
-		return newInvalidIdServiceError(err, "program class enrollment ID")
-	}
-	log.add("class_enrollment_id", id)
-	err = srv.WithUserContext(r).DeleteProgramClassEnrollments(id)
-	if err != nil {
-		return newDatabaseServiceError(err)
-	}
-	log.info("class enrollment deleted")
-	return writeJsonResponse(w, http.StatusNoContent, "Class enrollment deleted successfully")
-}
-
 func (srv *server) handleUpdateProgramClassEnrollments(w http.ResponseWriter, r *http.Request, log sLog) error {
 	classId, err := strconv.Atoi(r.PathValue("cohort_id"))
 	if err != nil {

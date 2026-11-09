@@ -480,10 +480,6 @@ func TestRoutes(t *testing.T) {
 		{"user_attendance_export", facAdmin, http.MethodGet, user("/api/program-users/%d/attendance-export?all=true", w.resident), nil, http.StatusOK, false},
 		{"enrollments_after_deactivate", facAdmin, http.MethodGet, "/api/program-classes/1/enrollments?status=all", nil, http.StatusOK, false},
 
-		// Deletes last: this route removes the enrollment whose id is the
-		// cohort id in the path, so it runs after everything that reads
-		// enrollments.
-		{"enrollments_delete", facAdmin, http.MethodDelete, "/api/programs/2/classes/2/enrollments", nil, http.StatusNoContent, false},
 		{"cohort_delete", facAdmin, http.MethodDelete, "/api/program-classes/4", nil, http.StatusNoContent, false},
 		{"program_classes_after_deletes", facAdmin, http.MethodGet, "/api/program-classes", nil, http.StatusOK, false},
 	}
@@ -619,7 +615,6 @@ func TestRouteAccess(t *testing.T) {
 		{http.MethodPost, "/api/program-classes/1/enrollments", "/api/program-classes/3/enrollments", adminAtFacility, true},
 		{http.MethodPatch, "/api/program-classes/1/enrollments", "/api/program-classes/3/enrollments", adminAtFacility, true},
 		{http.MethodPatch, "/api/program-classes/1/enrollments/1/date", "/api/program-classes/3/enrollments/5/date", adminAtFacility, true},
-		{http.MethodDelete, "/api/programs/1/classes/1/enrollments", "/api/programs/1/classes/3/enrollments", adminAtFacility, true},
 		{http.MethodGet, "/api/programs/1/classes/1/enrollments/1/attendance", "/api/programs/1/classes/3/enrollments/5/attendance", adminAtFacility, true},
 		{http.MethodGet, user("/api/program-users/%d/program-completions", w.resident), user("/api/program-users/%d/program-completions", w.southResident), selfOrAdmin, true},
 
@@ -764,6 +759,21 @@ func TestUpdateClassesFacility(t *testing.T) {
 			}
 		})
 	}
+}
+
+// The class-enrollments DELETE route is gone. It deleted the enrollment whose
+// own id matched the class id in the path, whatever class that enrollment was
+// in: here enrollment 2, which is in class 1.
+func TestDeleteClassEnrollmentsRouteRemoved(t *testing.T) {
+	ts, client, srv, lms := newRouteTest(t)
+	w := seedPrograms(t, srv.store, lms)
+
+	resp := call(t, ts, client, w.claims(w.deptAdmin), http.MethodDelete, "/api/programs/2/classes/2/enrollments", nil)
+	require.Equal(t, http.StatusNotFound, resp.status, resp.body)
+
+	var count int64
+	require.NoError(t, srv.store.Model(&models.ProgramClassEnrollment{}).Where("id = ? AND cohort_id = ?", 2, 1).Count(&count).Error)
+	require.EqualValues(t, 1, count, "enrollment 2 in class 1 was deleted")
 }
 
 // sortArrays orders every JSON array by its elements' JSON, so a route whose
