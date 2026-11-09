@@ -398,15 +398,9 @@ func (db *DB) UpdateProgramStatus(id, userID uint, upd models.ProgramStatusUpdat
 		return nil, false, err
 	}
 	if upd.ArchivedAt != nil {
-		err := db.Model(&models.ProgramClassCohort{}).
-			Joins("JOIN facilities ON facilities.id = program_class_cohorts.facility_id").
-			Where("program_class_cohorts.program_id = ? AND program_class_cohorts.status IN ? AND program_class_cohorts.archived_at IS NULL", id,
-				[]models.ClassStatus{models.Active, models.Scheduled}).
-			Distinct().
-			Pluck("facilities.name", &facilities).Error
-
+		facilities, err = db.GetProgramActiveClassFacilities(db.Statement.Context, id)
 		if err != nil {
-			return nil, false, newGetRecordsDBError(err, "program_classes / facilities")
+			return nil, false, err
 		}
 		if len(facilities) > 0 {
 			return facilities, false, nil
