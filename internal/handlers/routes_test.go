@@ -743,6 +743,8 @@ func TestUpdateClassesFacility(t *testing.T) {
 		{"no_ids", facAdmin, "", 16, http.StatusUnauthorized, nil},
 		{"statewide_admin_other_facility", deptAdmin, "id=3", 17, http.StatusOK, []uint{3}},
 		{"statewide_admin_non_numeric_id", deptAdmin, "id=3&id=abc", 18, http.StatusUnauthorized, nil},
+		{"statewide_admin_out_of_range_id", deptAdmin, "id=3&id=18446744073709551615", 19, http.StatusUnauthorized, nil},
+		{"statewide_admin_zero_id", deptAdmin, "id=3&id=0", 20, http.StatusUnauthorized, nil},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

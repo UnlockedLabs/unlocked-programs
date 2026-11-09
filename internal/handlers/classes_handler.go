@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -286,16 +287,28 @@ func (srv *server) handleUpdateClass(w http.ResponseWriter, r *http.Request, log
 	return writeJsonResponse(w, http.StatusOK, updated)
 }
 
-func (srv *server) handleUpdateClasses(w http.ResponseWriter, r *http.Request, log sLog) error {
-	ids := r.URL.Query()["id"]
-	classIDs := make([]int, 0, len(ids))
-	for _, id := range ids {
-		classID, err := strconv.Atoi(id)
-		if err != nil {
-			log.warn("invalid class ID in batch update, skipping: ", id)
-			continue
+// classIDsFromQuery is the ?id= list of a bulk class update. It fails when the
+// list is empty or any ID isn't a positive integer.
+func classIDsFromQuery(r *http.Request) ([]int, error) {
+	raw := r.URL.Query()["id"]
+	if len(raw) == 0 {
+		return nil, errors.New("no class IDs")
+	}
+	ids := make([]int, 0, len(raw))
+	for _, s := range raw {
+		id, err := strconv.Atoi(s)
+		if err != nil || id <= 0 {
+			return nil, fmt.Errorf("invalid class ID %q", s)
 		}
-		classIDs = append(classIDs, classID)
+		ids = append(ids, id)
+	}
+	return ids, nil
+}
+
+func (srv *server) handleUpdateClasses(w http.ResponseWriter, r *http.Request, log sLog) error {
+	classIDs, err := classIDsFromQuery(r)
+	if err != nil {
+		return newInvalidIdServiceError(err, "class ID")
 	}
 	classMap := make(map[string]any)
 	if err := json.NewDecoder(r.Body).Decode(&classMap); err != nil {
