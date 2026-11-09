@@ -125,3 +125,17 @@ func TestProgramStatusMalformedJSONKeepsGenericMessage(t *testing.T) {
 	require.Equal(t, http.StatusBadRequest, resp.StatusCode)
 	require.Equal(t, "error reading json request", body.Message)
 }
+
+func TestProgramStatusFailedUpdateReleasesTransaction(t *testing.T) {
+	srv := newTestServer(t)
+	require.NoError(t, srv.store.Create(&models.Program{Name: "P", Description: "d", IsActive: true}).Error)
+	require.NoError(t, srv.store.Exec(`CREATE TRIGGER block_program_update BEFORE UPDATE ON programs BEGIN SELECT RAISE(ABORT, 'blocked'); END`).Error)
+
+	active := false
+	_, _, err := srv.store.UpdateProgramStatus(1, 1, models.ProgramStatusUpdate{IsActive: &active})
+	require.Error(t, err)
+
+	sqlDB, err := srv.store.DB.DB()
+	require.NoError(t, err)
+	require.Zero(t, sqlDB.Stats().InUse, "the failed update left its transaction open")
+}

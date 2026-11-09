@@ -431,6 +431,7 @@ func (db *DB) UpdateProgramStatus(id, userID uint, upd models.ProgramStatusUpdat
 	if err := trans.Model(&models.Program{}).
 		Where("id = ?", id).
 		Updates(columns).Error; err != nil {
+		trans.Rollback()
 		return nil, false, newUpdateDBError(err, "program status")
 	}
 	if err := trans.Create(&logEntry).Error; err != nil {
