@@ -66,7 +66,7 @@ var (
 		models.EnrollmentIncompleteWithdrawn,
 		models.EnrollmentIncompleteDropped,
 		models.EnrollmentIncompleteFailedToComplete,
-		models.EnrollmentIncompleteTransfered,
+		models.EnrollmentIncompleteTransferred,
 	}
 	sampleAttendance = []models.Attendance{models.Present, models.Absent_Excused, models.Absent_Unexcused}
 )
