@@ -388,7 +388,7 @@ func updateProgramCreditTypes(trans *gorm.DB, updateProgram *models.Program, pro
 	return logEntries, nil
 }
 
-func (db *DB) UpdateProgramStatus(programUpdate map[string]any, id uint) ([]string, bool, error) {
+func (db *DB) UpdateProgramStatus(id, userID uint, upd models.ProgramStatusUpdate) ([]string, bool, error) {
 	var (
 		facilities []string
 		logEntry   *models.ChangeLogEntry
@@ -397,7 +397,7 @@ func (db *DB) UpdateProgramStatus(programUpdate map[string]any, id uint) ([]stri
 	if err != nil {
 		return nil, false, err
 	}
-	if programUpdate["archived_at"] != nil {
+	if upd.ArchivedAt != nil {
 		err := db.Model(&models.ProgramClassCohort{}).
 			Joins("JOIN facilities ON facilities.id = program_class_cohorts.facility_id").
 			Where("program_class_cohorts.program_id = ? AND program_class_cohorts.status IN ? AND program_class_cohorts.archived_at IS NULL", id,
@@ -411,11 +411,18 @@ func (db *DB) UpdateProgramStatus(programUpdate map[string]any, id uint) ([]stri
 		if len(facilities) > 0 {
 			return facilities, false, nil
 		}
-		logEntry = models.NewChangeLogEntry("programs", "archived_at", nil, StringPtr(programUpdate["archived_at"].(string)), updatePrg.ID, programUpdate["update_user_id"].(uint))
+		logEntry = models.NewChangeLogEntry("programs", "archived_at", nil, upd.ArchivedAt, updatePrg.ID, userID)
 	} else { //is possible that the old value is the same as the new value here when reactivating
 		oldValue := strconv.FormatBool(updatePrg.IsActive)
-		newValue := strconv.FormatBool(programUpdate["is_active"].(bool))
-		logEntry = models.NewChangeLogEntry("programs", "is_active", StringPtr(oldValue), StringPtr(newValue), updatePrg.ID, programUpdate["update_user_id"].(uint))
+		newValue := strconv.FormatBool(*upd.IsActive)
+		logEntry = models.NewChangeLogEntry("programs", "is_active", StringPtr(oldValue), StringPtr(newValue), updatePrg.ID, userID)
+	}
+	columns := map[string]any{"update_user_id": userID}
+	if upd.IsActive != nil {
+		columns["is_active"] = *upd.IsActive
+	}
+	if upd.ArchivedAtSet {
+		columns["archived_at"] = upd.ArchivedAt
 	}
 	trans := db.Begin() //create transaction
 	if trans.Error != nil {
@@ -423,7 +430,7 @@ func (db *DB) UpdateProgramStatus(programUpdate map[string]any, id uint) ([]stri
 	}
 	if err := trans.Model(&models.Program{}).
 		Where("id = ?", id).
-		Updates(programUpdate).Error; err != nil {
+		Updates(columns).Error; err != nil {
 		return nil, false, newUpdateDBError(err, "program status")
 	}
 	if err := trans.Create(&logEntry).Error; err != nil {

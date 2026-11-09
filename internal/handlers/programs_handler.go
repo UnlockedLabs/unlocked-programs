@@ -216,10 +216,45 @@ func (srv *server) handleUpdateProgram(w http.ResponseWriter, r *http.Request, l
 	return writeJsonResponse(w, http.StatusOK, updated)
 }
 
+const programStatusBodyMessage = "body must set is_active (true or false) or archived_at (an RFC 3339 time)"
+
+// archived_at is raw so a JSON null (clear the archive) stays distinct from a
+// missing key (leave it alone).
+type programStatusRequest struct {
+	IsActive   *bool           `json:"is_active"`
+	ArchivedAt json.RawMessage `json:"archived_at"`
+}
+
+func (b programStatusRequest) validate() (models.ProgramStatusUpdate, error) {
+	upd := models.ProgramStatusUpdate{IsActive: b.IsActive, ArchivedAtSet: len(b.ArchivedAt) > 0}
+	if upd.ArchivedAtSet && string(b.ArchivedAt) != "null" {
+		var at string
+		if err := json.Unmarshal(b.ArchivedAt, &at); err != nil {
+			return upd, err
+		}
+		if _, err := time.Parse(time.RFC3339, at); err != nil {
+			return upd, err
+		}
+		upd.ArchivedAt = &at
+	}
+	if upd.IsActive == nil && upd.ArchivedAt == nil {
+		return upd, errors.New("neither is_active nor archived_at is set")
+	}
+	return upd, nil
+}
+
 func (srv *server) handleUpdateProgramStatus(w http.ResponseWriter, r *http.Request, log sLog) error {
-	programUpdate := make(map[string]any)
-	if err := json.NewDecoder(r.Body).Decode(&programUpdate); err != nil {
+	var body programStatusRequest
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		var typeErr *json.UnmarshalTypeError
+		if errors.As(err, &typeErr) {
+			return newBadRequestServiceError(err, programStatusBodyMessage)
+		}
 		return newJSONReqBodyServiceError(err)
+	}
+	upd, err := body.validate()
+	if err != nil {
+		return newBadRequestServiceError(err, programStatusBodyMessage)
 	}
 	id, err := strconv.Atoi(r.PathValue("id"))
 	if err != nil {
@@ -227,8 +262,7 @@ func (srv *server) handleUpdateProgramStatus(w http.ResponseWriter, r *http.Requ
 	}
 	log.add("program_id", id)
 	claims := claimsFrom(r)
-	programUpdate["update_user_id"] = claims.UserID
-	facilities, updated, err := srv.WithUserContext(r).UpdateProgramStatus(programUpdate, uint(id))
+	facilities, updated, err := srv.WithUserContext(r).UpdateProgramStatus(uint(id), claims.UserID, upd)
 	if err != nil {
 		return newDatabaseServiceError(err)
 	}
