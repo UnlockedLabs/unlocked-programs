@@ -210,3 +210,37 @@ func TestGraduationRecordsAdminEmail(t *testing.T) {
 	require.NoError(t, srv.store.Where("user_id = ?", resident.ID).First(&completion).Error)
 	assert.Equal(t, "facadmin@example.com", completion.AdminEmail)
 }
+
+func TestUpdateEnrollmentsRejectsUnknownStatus(t *testing.T) {
+	srv := newTestServer(t)
+	facility := models.Facility{Name: "North", Timezone: "America/Chicago"}
+	require.NoError(t, srv.store.Create(&facility).Error)
+	admin := models.User{Username: "facadmin", Email: "facadmin@example.com", Role: users.FacilityAdmin, FacilityID: facility.ID}
+	require.NoError(t, srv.store.Create(&admin).Error)
+	resident := models.User{Username: "resident", Email: "resident@example.com", Role: users.Student, FacilityID: facility.ID}
+	require.NoError(t, srv.store.Create(&resident).Error)
+	program := models.Program{Name: "GED"}
+	require.NoError(t, srv.store.Create(&program).Error)
+	class := models.ProgramClassCohort{ProgramID: program.ID, FacilityID: facility.ID, Status: models.Active, Description: "Description", Capacity: 10, StartDt: time.Now()}
+	require.NoError(t, srv.store.Create(&class).Error)
+	require.NoError(t, srv.store.Create(&models.ProgramClassEnrollment{CohortID: class.ID, UserID: resident.ID, EnrollmentStatus: models.Enrolled}).Error)
+	cohortID := strconv.Itoa(int(class.ID))
+
+	for _, status := range []string{"Incomplete: Transfered", "Bogus"} {
+		t.Run(status, func(t *testing.T) {
+			body, err := json.Marshal(map[string]any{"enrollment_status": status, "user_ids": []uint{resident.ID}})
+			require.NoError(t, err)
+			req := httptest.NewRequest(http.MethodPatch, "/api/program-classes/"+cohortID+"/enrollments", bytes.NewReader(body))
+			req.SetPathValue("cohort_id", cohortID)
+			req = req.WithContext(identity.NewContext(req.Context(), &identity.Claims{UserID: admin.ID, Role: admin.Role, FacilityID: facility.ID}))
+			err = srv.handleUpdateProgramClassEnrollments(httptest.NewRecorder(), req, sLog{f: map[string]any{}})
+			svcErr, ok := err.(serviceError)
+			require.True(t, ok, "expected a serviceError, got %v", err)
+			assert.Equal(t, http.StatusBadRequest, svcErr.Status)
+
+			var stored models.ProgramClassEnrollment
+			require.NoError(t, srv.store.Where("user_id = ?", resident.ID).First(&stored).Error)
+			assert.Equal(t, models.Enrolled, stored.EnrollmentStatus)
+		})
+	}
+}
