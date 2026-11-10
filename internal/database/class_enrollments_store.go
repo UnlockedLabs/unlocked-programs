@@ -193,13 +193,6 @@ func (db *DB) CreateProgramClassEnrollments(classID int, userIds []int) (int, er
 	return skipped, nil
 }
 
-func (db *DB) DeleteProgramClassEnrollments(id int) error {
-	if err := db.Model(&models.ProgramClassEnrollment{}).Delete(&models.ProgramClassEnrollment{}, "id = ?", id).Error; err != nil {
-		return newDeleteDBError(err, "class enrollment")
-	}
-	return nil
-}
-
 // GraduateEnrollments marks residents in one COHORT as completed and issues each of them
 // the parent CLASS's certificate. cohortId is a cohort id, not a class id.
 func (db *DB) GraduateEnrollments(adminEmail string, userIds []int, cohortId int) error {

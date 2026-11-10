@@ -80,7 +80,6 @@ func (srv *server) routes() []route {
 		{Pattern: "POST /api/program-classes/{cohort_id}/enrollments", Handler: handle(srv.handleEnrollUsersInClass), Access: admin, Allow: cohort, Features: prog},
 		{Pattern: "PATCH /api/program-classes/{cohort_id}/enrollments", Handler: handle(srv.handleUpdateProgramClassEnrollments), Access: admin, Allow: cohort, Features: prog},
 		{Pattern: "PATCH /api/program-classes/{cohort_id}/enrollments/{enrollment_id}/date", Handler: handle(srv.handleUpdateEnrollmentDate), Access: admin, Allow: cohort, Features: prog},
-		{Pattern: "DELETE /api/programs/{id}/classes/{cohort_id}/enrollments", Handler: handle(srv.handleDeleteProgramClassEnrollments), Access: admin, Allow: cohort, Features: prog},
 		{Pattern: "GET /api/programs/{id}/classes/{cohort_id}/enrollments/{enrollment_id}/attendance", Handler: handle(srv.handleGetProgramClassEnrollmentsAttendance), Access: admin, Allow: cohort, Features: prog},
 		{Pattern: "GET /api/program-users/{id}/program-completions", Handler: handle(srv.handleGetUserProgramCompletions), UserParam: "id", Features: prog},
 
