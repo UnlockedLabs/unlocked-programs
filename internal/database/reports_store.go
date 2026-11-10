@@ -174,7 +174,7 @@ func (db *DB) GenerateProgramOutcomesReport(ctx context.Context, req *models.Rep
 			COALESCE(SUM(es.total_enrollments), 0) AS total_enrollments,
 			COALESCE(SUM(ac.capacity), 0) AS total_capacity
 		FROM programs p
-		JOIN facilities_programs fp ON fp.program_id = p.id
+		JOIN facilities_programs fp ON fp.program_id = p.id AND fp.deleted_at IS NULL
 		LEFT JOIN active_classes ac ON ac.program_id = fp.program_id AND ac.facility_id = fp.facility_id
 		LEFT JOIN enrollment_stats es ON es.cohort_id = ac.cohort_id
 		LEFT JOIN program_types_agg pta ON pta.program_id = p.id
@@ -255,7 +255,7 @@ func (db *DB) GenerateFacilityComparisonReport(ctx context.Context, req *models.
 				(SELECT CAST(pt2.program_type AS TEXT)
 				 FROM program_types pt2
 				 JOIN programs p2 ON p2.id = pt2.program_id
-				 JOIN facilities_programs fp2 ON fp2.program_id = p2.id
+				 JOIN facilities_programs fp2 ON fp2.program_id = p2.id AND fp2.deleted_at IS NULL
 				 WHERE fp2.facility_id = f.id
 				 GROUP BY pt2.program_type
 				 ORDER BY COUNT(*) DESC
@@ -265,7 +265,7 @@ func (db *DB) GenerateFacilityComparisonReport(ctx context.Context, req *models.
 			0 AS certificates_earned,
 			MAX(pcea.created_at) AS last_activity_date
 		`).
-		Joins("LEFT JOIN facilities_programs fp ON fp.facility_id = f.id").
+		Joins("LEFT JOIN facilities_programs fp ON fp.facility_id = f.id AND fp.deleted_at IS NULL").
 		Joins("LEFT JOIN programs p ON p.id = fp.program_id").
 		Joins("LEFT JOIN program_class_cohorts pc ON pc.program_id = p.id AND pc.facility_id = f.id").
 		Joins("LEFT JOIN program_class_enrollments pce ON pce.cohort_id = pc.id AND pce.enrolled_at <= ?", req.EndDate).

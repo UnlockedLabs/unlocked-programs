@@ -242,3 +242,45 @@ func enrolledResidents(env *TestEnv, args *models.QueryContext, classID uint) ([
 	err = env.DB.WithContext(args.Ctx).Where("id IN ?", ids).Order("name_last asc").Find(&residents).Error
 	return residents, err
 }
+
+// TestReportsIgnoreRemovedFacilityLinks verifies that the outcomes and facility
+// comparison reports don't count a program at a facility it was removed from.
+func TestReportsIgnoreRemovedFacilityLinks(t *testing.T) {
+	env := SetupTestEnv(t)
+	defer env.CleanupTestEnv()
+
+	facility, err := env.CreateTestFacility("Facility A")
+	require.NoError(t, err)
+	other, err := env.CreateTestFacility("Facility B")
+	require.NoError(t, err)
+
+	program, err := env.CreateTestProgram("Welding", models.FundingType(models.FederalGrants), []models.ProgramType{{ProgramType: models.Vocational}}, []models.ProgramCreditType{}, true, nil)
+	require.NoError(t, err)
+	require.NoError(t, env.SetFacilitiesToProgram(program.ID, []uint{facility.ID, other.ID}))
+	require.NoError(t, env.SetFacilitiesToProgram(program.ID, []uint{other.ID}))
+
+	now := time.Now()
+
+	t.Run("program outcomes count only live facilities", func(t *testing.T) {
+		rows, err := env.Programs.GenerateProgramOutcomesReport(env.Context, &models.ReportGenerateRequest{
+			Type:      models.ProgramOutcomesReport,
+			StartDate: now.AddDate(0, -2, 0),
+			EndDate:   now,
+		})
+		require.NoError(t, err)
+		require.Len(t, rows, 1)
+		assert.Equal(t, 1, rows[0].FacilitiesActive)
+	})
+
+	t.Run("facility comparison skips the removed program", func(t *testing.T) {
+		rows, err := env.Programs.GenerateFacilityComparisonReport(env.Context, &models.ReportGenerateRequest{
+			Type:      models.FacilityComparisonReport,
+			StartDate: now.AddDate(0, -2, 0),
+			EndDate:   now,
+		}, []uint{facility.ID})
+		require.NoError(t, err)
+		require.Len(t, rows, 1)
+		assert.Equal(t, 0, rows[0].TotalPrograms)
+		assert.Equal(t, "N/A", rows[0].TopProgramType)
+	})
+}

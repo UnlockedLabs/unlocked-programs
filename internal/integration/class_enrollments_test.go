@@ -482,3 +482,75 @@ func TestEligibleResidentsFilteredByClassFacility(t *testing.T) {
 		}
 	})
 }
+
+// TestEligibleResidentsRequireProgramAtFacility verifies that removing a program
+// from a facility ends eligibility for its classes there, and that re-adding it
+// returns each resident once.
+func TestEligibleResidentsRequireProgramAtFacility(t *testing.T) {
+	env := SetupTestEnv(t)
+	defer env.CleanupTestEnv()
+
+	facilityA, err := env.CreateTestFacility("Facility A")
+	require.NoError(t, err)
+	facilityB, err := env.CreateTestFacility("Facility B")
+	require.NoError(t, err)
+
+	program, err := env.CreateTestProgram("Removed Program Test", models.FundingType(models.FederalGrants), []models.ProgramType{}, []models.ProgramCreditType{}, true, nil)
+	require.NoError(t, err)
+	require.NoError(t, env.SetFacilitiesToProgram(program.ID, []uint{facilityA.ID, facilityB.ID}))
+
+	class, err := env.CreateTestClass(program, facilityA, models.Paused, nil)
+	require.NoError(t, err)
+	resident, err := env.CreateTestUser("removedprog", users.Student, facilityA.ID, "rp001")
+	require.NoError(t, err)
+
+	// SetFacilitiesToProgram soft-deletes the old rows and inserts new ones,
+	// like removing and re-adding a facility in the program form.
+	t.Run("removed from the class's facility", func(t *testing.T) {
+		require.NoError(t, env.SetFacilitiesToProgram(program.ID, []uint{facilityB.ID}))
+		ids, err := env.Core.EligibleUserIDs(env.Context, class.ID)
+		require.NoError(t, err)
+		require.Empty(t, ids)
+	})
+
+	t.Run("re-added to the class's facility", func(t *testing.T) {
+		require.NoError(t, env.SetFacilitiesToProgram(program.ID, []uint{facilityA.ID, facilityB.ID}))
+		ids, err := env.Core.EligibleUserIDs(env.Context, class.ID)
+		require.NoError(t, err)
+		require.Equal(t, []uint{resident.ID}, ids)
+	})
+}
+
+// TestTransferConflictsIgnoreRemovedProgram verifies that a program removed from
+// the transfer facility no longer counts as offered there, so its enrollment is
+// a conflict.
+func TestTransferConflictsIgnoreRemovedProgram(t *testing.T) {
+	env := SetupTestEnv(t)
+	defer env.CleanupTestEnv()
+
+	from, err := env.CreateTestFacility("From")
+	require.NoError(t, err)
+	to, err := env.CreateTestFacility("To")
+	require.NoError(t, err)
+
+	program, err := env.CreateTestProgram("Transfer Program", models.FundingType(models.FederalGrants), []models.ProgramType{}, []models.ProgramCreditType{}, true, nil)
+	require.NoError(t, err)
+	require.NoError(t, env.SetFacilitiesToProgram(program.ID, []uint{from.ID, to.ID}))
+
+	class, err := env.CreateTestClass(program, from, models.Active, nil)
+	require.NoError(t, err)
+	resident, err := env.CreateTestUser("transferres", users.Student, from.ID, "tr001")
+	require.NoError(t, err)
+	_, err = env.CreateTestEnrollment(class.ID, resident.ID, models.Enrolled)
+	require.NoError(t, err)
+
+	conflicts, err := env.Core.TransferConflicts(env.Context, resident.ID, to.ID)
+	require.NoError(t, err)
+	require.Empty(t, conflicts, "the program is offered at the transfer facility")
+
+	require.NoError(t, env.SetFacilitiesToProgram(program.ID, []uint{from.ID}))
+	conflicts, err = env.Core.TransferConflicts(env.Context, resident.ID, to.ID)
+	require.NoError(t, err)
+	require.Len(t, conflicts, 1)
+	require.Equal(t, "Transfer Program", conflicts[0].ProgramName)
+}

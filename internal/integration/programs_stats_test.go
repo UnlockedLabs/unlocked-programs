@@ -9,6 +9,7 @@ import (
 	"github.com/UnlockedLabs/unlocked-contracts/users"
 	"github.com/UnlockedLabs/unlocked-programs/internal/models"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -367,4 +368,50 @@ func (suite *ProgramsStatsTestSuite) TestFetchEnrollmentMetrics_CompletionRateCa
 
 func TestProgramsStatsTestSuite(t *testing.T) {
 	suite.Run(t, new(ProgramsStatsTestSuite))
+}
+
+// TestProgramStatsIgnoreRemovedFacilityLinks covers the stats queries after
+// programs are removed from a facility. Removing soft-deletes the
+// facilities_programs row and re-adding inserts a new one, so "readded" has a
+// removed row and a live row at the facility.
+func TestProgramStatsIgnoreRemovedFacilityLinks(t *testing.T) {
+	env := SetupTestEnv(t)
+	defer env.CleanupTestEnv()
+
+	facility, err := env.CreateTestFacility("Facility A")
+	require.NoError(t, err)
+	other, err := env.CreateTestFacility("Facility B")
+	require.NoError(t, err)
+
+	newProgram := func(name string) *models.Program {
+		program, err := env.CreateTestProgram(name, models.FundingType(models.FederalGrants), []models.ProgramType{}, []models.ProgramCreditType{}, true, nil)
+		require.NoError(t, err)
+		return program
+	}
+	removed, readded := newProgram("Removed"), newProgram("Readded")
+	require.NoError(t, env.SetFacilitiesToProgram(removed.ID, []uint{facility.ID, other.ID}))
+	require.NoError(t, env.SetFacilitiesToProgram(removed.ID, []uint{other.ID}))
+	require.NoError(t, env.SetFacilitiesToProgram(readded.ID, []uint{facility.ID}))
+	require.NoError(t, env.SetFacilitiesToProgram(readded.ID, []uint{facility.ID}))
+
+	resident, err := env.CreateTestUser("statsres", users.Student, facility.ID, "sr001")
+	require.NoError(t, err)
+	for _, program := range []*models.Program{removed, readded} {
+		class, err := env.CreateTestClass(program, facility, models.Active, nil)
+		require.NoError(t, err)
+		_, err = env.CreateTestEnrollment(class.ID, resident.ID, models.Enrolled)
+		require.NoError(t, err)
+	}
+
+	t.Run("facility stats count only programs offered there", func(t *testing.T) {
+		stats, err := env.Programs.GetProgramsFacilityStats(&models.QueryContext{Ctx: env.Context, FacilityID: facility.ID}, -1)
+		require.NoError(t, err)
+		require.Equal(t, int64(1), *stats.TotalPrograms)
+	})
+
+	t.Run("statewide stats count each live link once", func(t *testing.T) {
+		stats, err := env.Programs.GetProgramsFacilitiesStats(&models.QueryContext{Ctx: env.Context}, -1)
+		require.NoError(t, err)
+		require.Equal(t, float64(1), *stats.AvgActiveProgramsPerFacility)
+	})
 }

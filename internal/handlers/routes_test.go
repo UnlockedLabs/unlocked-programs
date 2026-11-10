@@ -960,3 +960,18 @@ func maskTimes(v any) any {
 	}
 	return v
 }
+
+// TestProgramInFacilityIgnoresRemovedLink verifies that a program removed from
+// the admin's facility no longer passes the facility check.
+func TestProgramInFacilityIgnoresRemovedLink(t *testing.T) {
+	_, _, srv, lms := newRouteTest(t)
+	w := seedPrograms(t, srv.store, lms)
+	allow := srv.programInFacility("")
+	r := httptest.NewRequest(http.MethodGet, "/api/programs/2/classes/outcomes", nil)
+	r.SetPathValue("program_id", "2")
+	claims := w.claims(w.facAdmin)
+
+	require.True(t, allow(r, claims))
+	require.NoError(t, srv.store.Where("program_id = ? AND facility_id = ?", 2, w.north.ID).Delete(&models.FacilitiesPrograms{}).Error)
+	require.False(t, allow(r, claims))
+}

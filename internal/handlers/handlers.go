@@ -260,7 +260,7 @@ func (srv *server) programInFacility(check string) func(*http.Request, *identity
 		var count int64
 		return srv.store.WithContext(r.Context()).
 			Table("programs").
-			Where(fmt.Sprintf("id = ? AND %s id IN (SELECT program_id FROM facilities_programs WHERE facility_id = ?)", check),
+			Where(fmt.Sprintf("id = ? AND %s id IN (SELECT program_id FROM facilities_programs WHERE facility_id = ? AND deleted_at IS NULL)", check),
 				r.PathValue("program_id"), facilityID).
 			Count(&count).Error == nil && count > 0
 	}
