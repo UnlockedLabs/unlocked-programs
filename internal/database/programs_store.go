@@ -783,7 +783,7 @@ func (db *DB) GetProgramsOverviewTable(args *models.QueryContext, timeFilter int
 			LEFT JOIN (
 				SELECT
 					p.id as program_id,
-					COUNT(DISTINCT CASE WHEN p.is_active = true AND p.archived_at IS NULL THEN fp.facility_id END) AS total_active_facilities,
+					COUNT(DISTINCT CASE WHEN p.is_active = true AND p.archived_at IS NULL THEN f.id END) AS total_active_facilities,
 					COUNT(DISTINCT pce.id) AS total_enrollments,
 					COUNT(DISTINCT CASE WHEN pce.enrollment_status = 'Enrolled' AND pce.enrolled_at IS NOT NULL AND (pce.enrollment_ended_at IS NULL OR pce.enrollment_ended_at > CURRENT_TIMESTAMP) THEN pce.id END) AS total_active_enrollments,
 					COUNT(DISTINCT CASE WHEN pce.enrollment_status = 'Enrolled' AND pce.enrolled_at IS NOT NULL AND (pce.enrollment_ended_at IS NULL OR pce.enrollment_ended_at > CURRENT_TIMESTAMP) AND pc.status = 'Active' THEN pce.id END) AS total_filled_seats,
@@ -793,6 +793,7 @@ func (db *DB) GetProgramsOverviewTable(args *models.QueryContext, timeFilter int
 					class_stats.total_capacity
 				FROM programs p
 				LEFT JOIN facilities_programs fp ON fp.program_id = p.id AND fp.deleted_at IS NULL
+				LEFT JOIN facilities f ON f.id = fp.facility_id AND f.deleted_at IS NULL
 				LEFT JOIN program_class_cohorts pc ON pc.program_id = p.id
 				LEFT JOIN program_class_enrollments pce ON pce.cohort_id = pc.id
 				LEFT JOIN (
@@ -947,6 +948,34 @@ func (db *DB) GetProgramsOverviewTable(args *models.QueryContext, timeFilter int
 	}
 
 	return programsTable, nil
+}
+
+// GetActiveFacilityNames maps each program to the names of the facilities it
+// is offered at, sorted. It lists the same facilities total_active_facilities
+// counts, so a program that is inactive or archived gets none.
+func (db *DB) GetActiveFacilityNames(ctx context.Context, programIDs []uint) (map[uint][]string, error) {
+	names := make(map[uint][]string, len(programIDs))
+	if len(programIDs) == 0 {
+		return names, nil
+	}
+	var rows []struct {
+		ProgramID uint
+		Name      string
+	}
+	if err := db.WithContext(ctx).Table("facilities_programs fp").
+		Select("fp.program_id, f.name").
+		Joins("JOIN facilities f ON f.id = fp.facility_id AND f.deleted_at IS NULL").
+		Joins("JOIN programs p ON p.id = fp.program_id").
+		Where("fp.program_id IN ? AND fp.deleted_at IS NULL", programIDs).
+		Where("p.is_active = true AND p.archived_at IS NULL").
+		Order("LOWER(f.name), f.name").
+		Scan(&rows).Error; err != nil {
+		return nil, newGetRecordsDBError(err, "facilities_programs")
+	}
+	for _, row := range rows {
+		names[row.ProgramID] = append(names[row.ProgramID], row.Name)
+	}
+	return names, nil
 }
 
 func (db *DB) GetProgramCreatedAtAndBy(id int, args *models.QueryContext) (models.ActivityHistoryResponse, error) {
