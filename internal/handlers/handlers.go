@@ -75,8 +75,8 @@ func (srv *server) routes() []route {
 		{Pattern: "PUT /api/program-classes/{cohort_id}/events", Handler: handle(srv.handleRescheduleEventSeries), Access: admin, Allow: cohort, Features: prog},
 
 		// Enrollments
-		{Pattern: "GET /api/program-classes/{cohort_id}/enrollments", Handler: handle(srv.handleGetEnrollmentsForProgram), Access: admin, Features: prog},
-		{Pattern: "POST /api/program-classes/{cohort_id}/enrollment-conflicts", Handler: handle(srv.handleCheckEnrollmentConflicts), Access: admin, Features: prog},
+		{Pattern: "GET /api/program-classes/{cohort_id}/enrollments", Handler: handle(srv.handleGetEnrollmentsForProgram), Access: admin, Allow: srv.classInFacility, Features: prog},
+		{Pattern: "POST /api/program-classes/{cohort_id}/enrollment-conflicts", Handler: handle(srv.handleCheckEnrollmentConflicts), Access: admin, Allow: srv.classInFacility, Features: prog},
 		{Pattern: "POST /api/program-classes/{cohort_id}/enrollments", Handler: handle(srv.handleEnrollUsersInClass), Access: admin, Allow: cohort, Features: prog},
 		{Pattern: "PATCH /api/program-classes/{cohort_id}/enrollments", Handler: handle(srv.handleUpdateProgramClassEnrollments), Access: admin, Allow: cohort, Features: prog},
 		{Pattern: "PATCH /api/program-classes/{cohort_id}/enrollments/{enrollment_id}/date", Handler: handle(srv.handleUpdateEnrollmentDate), Access: admin, Allow: cohort, Features: prog},

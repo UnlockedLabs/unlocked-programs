@@ -546,6 +546,11 @@ func TestRouteAccess(t *testing.T) {
 	)
 	north, south := w.north.ID, w.south.ID
 	user := func(format string, u *models.User) string { return fmt.Sprintf(format, u.ID) }
+	// canvasClass is a path under a facility's Canvas class, whose ID carries
+	// the facility.
+	canvasClass := func(facility uint, suffix string) string {
+		return fmt.Sprintf("/api/program-classes/%d%s", encodeFacilityCanvasClassID(facility, canvasProviderID, canvasCourseID), suffix)
+	}
 
 	routes := []struct {
 		method     string
@@ -608,8 +613,9 @@ func TestRouteAccess(t *testing.T) {
 		{http.MethodPut, "/api/program-classes/1/events", "/api/program-classes/3/events", adminAtFacility, true},
 
 		// Enrollments
-		{http.MethodGet, "/api/program-classes/1/enrollments", "", admin, true},
-		{http.MethodPost, "/api/program-classes/1/enrollment-conflicts", "", admin, true},
+		{http.MethodGet, "/api/program-classes/1/enrollments", "/api/program-classes/3/enrollments", adminAtFacility, true},
+		{http.MethodGet, canvasClass(north, "/enrollments"), canvasClass(south, "/enrollments"), adminAtFacility, true},
+		{http.MethodPost, "/api/program-classes/1/enrollment-conflicts", "/api/program-classes/3/enrollment-conflicts", adminAtFacility, true},
 		{http.MethodPost, "/api/program-classes/1/enrollments", "/api/program-classes/3/enrollments", adminAtFacility, true},
 		{http.MethodPatch, "/api/program-classes/1/enrollments", "/api/program-classes/3/enrollments", adminAtFacility, true},
 		{http.MethodPatch, "/api/program-classes/1/enrollments/1/date", "/api/program-classes/3/enrollments/5/date", adminAtFacility, true},
