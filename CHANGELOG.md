@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.1.1](https://github.com/UnlockedLabs/unlocked-programs/compare/v0.1.0...v0.1.1) (2026-11-10)
+
+
+### Bug Fixes
+
+* allowlist order_by and direction on list queries (EN-229) ([#5](https://github.com/UnlockedLabs/unlocked-programs/issues/5)) ([bf809f1](https://github.com/UnlockedLabs/unlocked-programs/commit/bf809f1447e5851ed74b59281930f15051c8dc36))
+* check the class's facility before showing its enrollments or conflicts (EN-238) ([afe6029](https://github.com/UnlockedLabs/unlocked-programs/commit/afe602910164d0fd2202d3079e0208cd8c05ce62))
+* only allow bulk class edits when every class is at the admin's facility (EN-239) ([23f5f43](https://github.com/UnlockedLabs/unlocked-programs/commit/23f5f43ad1d801d3d146e1577e4cf8cfba95eeb0))
+* only allow bulk class edits when every class is at the admin's facility (EN-239) ([d5aff3e](https://github.com/UnlockedLabs/unlocked-programs/commit/d5aff3e7a25e6a1b4868b76163bf89de93ab0568))
+* parse bulk class IDs once for the access check and the handler (EN-239) ([0c4ffae](https://github.com/UnlockedLabs/unlocked-programs/commit/0c4ffaeb0ad1f94e26aac66382fbaca9503dddd0))
+* remove the class enrollments delete route that deleted the wrong enrollment (EN-242) ([483c79c](https://github.com/UnlockedLabs/unlocked-programs/commit/483c79c371a9ca78441ca06c197e8fb50c1ae837))
+* remove the class enrollments delete route that deleted the wrong enrollment (EN-242) ([f6dfdb2](https://github.com/UnlockedLabs/unlocked-programs/commit/f6dfdb29cf22b6d1b582616903096c4cb41e6af4))
+
 ## 0.1.0 (2026-11-06)
 
 
