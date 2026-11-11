@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.1.2](https://github.com/UnlockedLabs/unlocked-programs/compare/v0.1.1...v0.1.2) (2026-11-11)
+
+
+### Bug Fixes
+
+* build with Go 1.26.11 for GO-2026-6859 (EN-251) ([57895db](https://github.com/UnlockedLabs/unlocked-programs/commit/57895db59f9da8b5d3262c94e04d3ca764e71408))
+* build with Go 1.26.11 for GO-2026-6859 (EN-251) and govulncheck consistency update- [#5](https://github.com/UnlockedLabs/unlocked-programs/issues/5) ([84fba8f](https://github.com/UnlockedLabs/unlocked-programs/commit/84fba8f02d9d7df34364f253bdc7a21d0f85e47e))
+* build with Go 1.26.11 for GO-2026-6859 (EN-251) and govulncheck consistency update- [#5](https://github.com/UnlockedLabs/unlocked-programs/issues/5) ([84fba8f](https://github.com/UnlockedLabs/unlocked-programs/commit/84fba8f02d9d7df34364f253bdc7a21d0f85e47e))
+
 ## [0.1.1](https://github.com/UnlockedLabs/unlocked-programs/compare/v0.1.0...v0.1.1) (2026-11-10)
 
 
