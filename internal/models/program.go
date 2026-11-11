@@ -118,6 +118,14 @@ type Program struct {
 
 func (Program) TableName() string { return "programs" }
 
+// ProgramStatusUpdate is a validated change to a program's status.
+// ArchivedAtSet separates "archived_at": null (clear it) from leaving it out.
+type ProgramStatusUpdate struct {
+	IsActive      *bool
+	ArchivedAt    *string
+	ArchivedAtSet bool
+}
+
 type ProgramType struct {
 	ProgramType ProgType `json:"program_type" gorm:"primaryKey;type:program_type" validate:"required"`
 	ProgramID   uint     `json:"program_id" gorm:"primaryKey;not null" validate:"required"`
