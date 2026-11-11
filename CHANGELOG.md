@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.3](https://github.com/UnlockedLabs/unlocked-programs/compare/v0.1.2...v0.1.3) (2026-11-11)
+
+
+### Bug Fixes
+
+* answer 400 for invalid program status bodies (EN-243) ([#10](https://github.com/UnlockedLabs/unlocked-programs/issues/10)) ([9b31a3f](https://github.com/UnlockedLabs/unlocked-programs/commit/9b31a3f13035405c07496e995f133a33c78df409))
+
 ## [0.1.2](https://github.com/UnlockedLabs/unlocked-programs/compare/v0.1.1...v0.1.2) (2026-11-11)
 
 
