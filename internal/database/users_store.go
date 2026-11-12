@@ -12,6 +12,7 @@ func (db *DB) GetTransferProgramConflicts(ctx context.Context, id uint, transfer
 			select name from programs p
 			inner join facilities_programs fp on fp.program_id = p.id
 					and fp.facility_id = ?
+					and fp.deleted_at is null
 			where p.is_active = true
 		)
 		select cl.name as class_name, p.name as program_name from program_class_enrollments pce
@@ -46,7 +47,7 @@ func (db *DB) GetEligibleResidentIDsForClass(ctx context.Context, classID int) (
 	var ids []uint
 	if err := db.WithContext(ctx).Table("users").
 		Joins("LEFT JOIN program_class_enrollments pse ON users.id = pse.user_id AND pse.cohort_id = ?", classID).
-		Joins("JOIN facilities_programs fp ON users.facility_id = fp.facility_id").
+		Joins("JOIN facilities_programs fp ON users.facility_id = fp.facility_id AND fp.deleted_at IS NULL").
 		Joins("JOIN program_class_cohorts c ON c.program_id = fp.program_id AND c.id = ?", classID).
 		Where("pse.user_id IS NULL"). //not enrolled in class
 		Where("users.role = 'student'").

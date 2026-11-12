@@ -519,7 +519,7 @@ func (db *DB) GetProgramsFacilitiesStats(args *models.QueryContext, timeFilter i
 			COUNT(DISTINCT fp.id) as total_associations,
 			COUNT(DISTINCT f.id) as total_facilities
 		FROM facilities f
-		LEFT JOIN facilities_programs fp ON fp.facility_id = f.id
+		LEFT JOIN facilities_programs fp ON fp.facility_id = f.id AND fp.deleted_at IS NULL
 		LEFT JOIN programs p ON p.id = fp.program_id AND p.is_active = true AND p.archived_at IS NULL
 		LEFT JOIN program_class_cohorts pc ON pc.program_id = p.id AND pc.facility_id = f.id AND pc.status = 'Active'
 		LEFT JOIN program_class_enrollments pce ON pce.cohort_id = pc.id
@@ -585,7 +585,7 @@ func (db *DB) GetProgramsFacilityStats(args *models.QueryContext, timeFilter int
 	if err := db.WithContext(args.Ctx).Raw(`
 		SELECT COUNT(DISTINCT p.id) AS total_programs
 		FROM programs p
-		JOIN facilities_programs fp ON fp.program_id = p.id
+		JOIN facilities_programs fp ON fp.program_id = p.id AND fp.deleted_at IS NULL
 		JOIN program_class_cohorts pc ON pc.program_id = p.id AND pc.facility_id = fp.facility_id AND pc.status = 'Active'
 		JOIN program_class_enrollments pce ON pce.cohort_id = pc.id
 		WHERE fp.facility_id = ? AND p.is_active = true AND p.archived_at IS NULL
@@ -766,7 +766,7 @@ func (db *DB) GetProgramsOverviewTable(args *models.QueryContext, timeFilter int
 					COUNT(DISTINCT CASE WHEN pc.status = 'Cancelled' THEN pc.id END) AS total_cancelled_classes,
 					class_stats.total_capacity
 				FROM programs p
-				JOIN facilities_programs fp ON fp.program_id = p.id
+				JOIN facilities_programs fp ON fp.program_id = p.id AND fp.deleted_at IS NULL
 				LEFT JOIN program_class_cohorts pc ON pc.program_id = p.id AND pc.facility_id = %d
 				LEFT JOIN program_class_enrollments pce ON pce.cohort_id = pc.id
 				LEFT JOIN (
@@ -792,7 +792,7 @@ func (db *DB) GetProgramsOverviewTable(args *models.QueryContext, timeFilter int
 					COUNT(DISTINCT CASE WHEN pc.status = 'Cancelled' THEN pc.id END) AS total_cancelled_classes,
 					class_stats.total_capacity
 				FROM programs p
-				LEFT JOIN facilities_programs fp ON fp.program_id = p.id
+				LEFT JOIN facilities_programs fp ON fp.program_id = p.id AND fp.deleted_at IS NULL
 				LEFT JOIN program_class_cohorts pc ON pc.program_id = p.id
 				LEFT JOIN program_class_enrollments pce ON pce.cohort_id = pc.id
 				LEFT JOIN (
@@ -868,7 +868,7 @@ func (db *DB) GetProgramsOverviewTable(args *models.QueryContext, timeFilter int
 		) AS pct ON pct.program_id = programs.id`)
 
 	if facilityScoped {
-		tx = tx.Joins("JOIN facilities_programs fp ON fp.program_id = programs.id").Where("fp.facility_id = ?", args.FacilityID)
+		tx = tx.Joins("JOIN facilities_programs fp ON fp.program_id = programs.id AND fp.deleted_at IS NULL").Where("fp.facility_id = ?", args.FacilityID)
 	}
 
 	if !includeArchived {
@@ -925,7 +925,7 @@ func (db *DB) GetProgramsOverviewTable(args *models.QueryContext, timeFilter int
 				tx = tx.Where(whereStatement)
 			}
 		case "facility_id":
-			tx = tx.Joins("JOIN facilities_programs fp ON fp.program_id = programs.id").Where("fp.facility_id = ?", val)
+			tx = tx.Joins("JOIN facilities_programs fp ON fp.program_id = programs.id AND fp.deleted_at IS NULL").Where("fp.facility_id = ?", val)
 		}
 	}
 
