@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.2.0](https://github.com/UnlockedLabs/unlocked-programs/compare/v0.1.3...v0.2.0) (2026-11-13)
+
+
+### Features
+
+* list the facilities a program is offered at on the programs overview (EN-119) ([f77aa50](https://github.com/UnlockedLabs/unlocked-programs/commit/f77aa502235abef6dcc0882ed97693066c255f17))
+* list the facilities a program is offered at on the programs overview (EN-119) ([f77aa50](https://github.com/UnlockedLabs/unlocked-programs/commit/f77aa502235abef6dcc0882ed97693066c255f17))
+* list the facilities a program is offered at on the programs overview (EN-119) ([cd19b12](https://github.com/UnlockedLabs/unlocked-programs/commit/cd19b120a15db098d1f813e252ff21f4f2a4c423))
+
+
+### Bug Fixes
+
+* spell Transferred correctly everywhere (EN-244) ([#6](https://github.com/UnlockedLabs/unlocked-programs/issues/6)) ([57ff1a7](https://github.com/UnlockedLabs/unlocked-programs/commit/57ff1a7efec6b771deee3815e444342fa6c740ce))
+* stop counting a program at facilities it was removed from (EN-246) ([c275850](https://github.com/UnlockedLabs/unlocked-programs/commit/c275850a4ca1786252b560cdcad08ffb69e1c864))
+* stop residents being eligible for a program's classes after it leaves their facility (EN-246) ([5fb0c6e](https://github.com/UnlockedLabs/unlocked-programs/commit/5fb0c6e491cc615c816ab2863053789818017a21))
+* stop residents being eligible for a program's classes after it leaves their facility (EN-246) ([5fb0c6e](https://github.com/UnlockedLabs/unlocked-programs/commit/5fb0c6e491cc615c816ab2863053789818017a21))
+
 ## [0.1.3](https://github.com/UnlockedLabs/unlocked-programs/compare/v0.1.2...v0.1.3) (2026-11-11)
 
 
