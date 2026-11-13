@@ -333,6 +333,62 @@ func (suite *ProgramsStatsTestSuite) TestGetProgramsFacilityStats_FacilitySpecif
 	assert.Equal(suite.T(), float64(2), *stats.AvgActiveProgramsPerFacility) // For single facility, this equals program count
 }
 
+func (suite *ProgramsStatsTestSuite) TestGetActiveFacilityNames() {
+	bravo := suite.createTestFacility("bravo")
+	alpha := suite.createTestFacility("Alpha")
+	charlie := suite.createTestFacility("Charlie")
+	removed := suite.createTestFacility("Removed Link")
+	deleted := suite.createTestFacility("Deleted Facility")
+	suite.Require().NoError(suite.env.DB.Delete(deleted).Error)
+
+	offered := suite.createTestProgram("Offered")
+	suite.createProgramFacilityAssociation(offered.ID, bravo.ID)
+	suite.createProgramFacilityAssociation(offered.ID, alpha.ID)
+	suite.createProgramFacilityAssociation(offered.ID, charlie.ID)
+	suite.createProgramFacilityAssociation(offered.ID, deleted.ID)
+	suite.createProgramFacilityAssociation(offered.ID, removed.ID)
+	suite.Require().NoError(suite.env.DB.
+		Where("program_id = ? AND facility_id = ?", offered.ID, removed.ID).
+		Delete(&models.FacilitiesPrograms{}).Error)
+
+	inactive := &models.Program{Name: "Inactive", IsActive: false}
+	suite.Require().NoError(suite.env.DB.Create(inactive).Error)
+	suite.createProgramFacilityAssociation(inactive.ID, alpha.ID)
+
+	archivedAt := time.Now()
+	archived := &models.Program{Name: "Archived", IsActive: true, ArchivedAt: &archivedAt}
+	suite.Require().NoError(suite.env.DB.Create(archived).Error)
+	suite.createProgramFacilityAssociation(archived.ID, alpha.ID)
+
+	unassigned := suite.createTestProgram("Unassigned")
+
+	names, err := suite.env.Programs.GetActiveFacilityNames(context.Background(),
+		[]uint{offered.ID, inactive.ID, archived.ID, unassigned.ID})
+	suite.Require().NoError(err)
+
+	tests := []struct {
+		name      string
+		programID uint
+		want      []string
+	}{
+		{"sorted without removed links or deleted facilities", offered.ID, []string{"Alpha", "bravo", "Charlie"}},
+		{"inactive program", inactive.ID, nil},
+		{"archived program", archived.ID, nil},
+		{"program at no facilities", unassigned.ID, nil},
+	}
+	for _, tt := range tests {
+		suite.Run(tt.name, func() {
+			suite.Equal(tt.want, names[tt.programID])
+		})
+	}
+
+	suite.Run("no programs", func() {
+		empty, err := suite.env.Programs.GetActiveFacilityNames(context.Background(), nil)
+		suite.Require().NoError(err)
+		suite.Empty(empty)
+	})
+}
+
 // TestFetchEnrollmentMetrics_CompletionRateCappedAt100 is a regression for ID-716
 // ("Statewide Program View — Avg Completion Rate = 130%"). FetchEnrollmentMetrics counted
 // Completed enrollments in the numerator without requiring enrolled_at IS NOT NULL, while the

@@ -183,6 +183,7 @@ type ProgramsOverviewTable struct {
 	Description            string   `json:"description"`
 	ArchivedAt             *string  `json:"archived_at"`
 	TotalActiveFacilities  *int64   `json:"total_active_facilities"`
+	FacilityNames          []string `json:"facility_names,omitempty" gorm:"-"`
 	TotalEnrollments       *int64   `json:"total_enrollments"`
 	TotalActiveEnrollments *int64   `json:"total_active_enrollments"`
 	TotalClasses           *int64   `json:"total_classes"`

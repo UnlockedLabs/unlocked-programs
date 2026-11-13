@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"encoding/csv"
 	"encoding/json"
 	"errors"
@@ -77,6 +78,11 @@ func (srv *server) handleIndexProgramsOverviewTable(w http.ResponseWriter, r *ht
 	for i := range programs {
 		programs[i].Source = "unlocked"
 	}
+	if adminRole != users.FacilityAdmin {
+		if err := srv.addFacilityNames(r.Context(), programs); err != nil {
+			return newDatabaseServiceError(err)
+		}
+	}
 	if claims.HasFeature(features.ProviderPlatforms) {
 		if canvasPrograms, canvasErr := srv.getCanvasProviderPrograms(args.FacilityID, adminRole); canvasErr != nil {
 			log.errorf("failed to fetch canvas provider programs: %v", canvasErr)
@@ -88,6 +94,23 @@ func (srv *server) handleIndexProgramsOverviewTable(w http.ResponseWriter, r *ht
 		}
 	}
 	return writePaginatedResponse(w, http.StatusOK, programs, args.IntoMeta())
+}
+
+// addFacilityNames fills in the facilities each program's facility count
+// counts, for the admins who see that count.
+func (srv *server) addFacilityNames(ctx context.Context, programs []models.ProgramsOverviewTable) error {
+	ids := make([]uint, len(programs))
+	for i := range programs {
+		ids[i] = programs[i].ProgramID
+	}
+	names, err := srv.store.GetActiveFacilityNames(ctx, ids)
+	if err != nil {
+		return err
+	}
+	for i := range programs {
+		programs[i].FacilityNames = names[programs[i].ProgramID]
+	}
+	return nil
 }
 
 func (srv *server) handleShowProgram(w http.ResponseWriter, r *http.Request, log sLog) error {
