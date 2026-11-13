@@ -42,7 +42,7 @@ func TestAllEnrollmentStatusesCoversIncompletePrefix(t *testing.T) {
 		EnrollmentIncompleteWithdrawn,
 		EnrollmentIncompleteDropped,
 		EnrollmentIncompleteFailedToComplete,
-		EnrollmentIncompleteTransfered,
+		EnrollmentIncompleteTransferred,
 		EnrollmentIncompleteSegregated,
 	}
 	for _, s := range declared {
@@ -59,5 +59,11 @@ func TestAllEnrollmentStatusesCoversIncompletePrefix(t *testing.T) {
 		if !found {
 			t.Errorf("AllEnrollmentStatuses is missing %q", s)
 		}
+	}
+}
+
+func TestTransferredStatusSpelling(t *testing.T) {
+	if string(EnrollmentIncompleteTransferred) != "Incomplete: Transferred" {
+		t.Errorf("got %q", EnrollmentIncompleteTransferred)
 	}
 }

@@ -17,7 +17,7 @@ var rosterStatusFilterMap = map[string]string{
 	"Dropped":            "Incomplete: Dropped",
 	"Segregated":         "Incomplete: Segregated",
 	"Failed to Complete": "Incomplete: Failed to Complete",
-	"Transfered":         "Incomplete: Transfered",
+	"Transferred":        "Incomplete: Transferred",
 }
 
 const sessionsAttendedSubquery = `(SELECT COUNT(*) FROM program_class_event_attendance pcea

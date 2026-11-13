@@ -153,7 +153,7 @@ func runUpdateToTerminalStatusTest(t *testing.T, env *TestEnv, facility *models.
 		models.EnrollmentIncompleteWithdrawn,
 		models.EnrollmentIncompleteDropped,
 		models.EnrollmentIncompleteFailedToComplete,
-		models.EnrollmentIncompleteTransfered,
+		models.EnrollmentIncompleteTransferred,
 		models.EnrollmentIncompleteSegregated,
 	}
 

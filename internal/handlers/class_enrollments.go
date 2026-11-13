@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"slices"
 	"strconv"
 	"time"
 
@@ -136,6 +137,9 @@ func (srv *server) handleUpdateProgramClassEnrollments(w http.ResponseWriter, r 
 	}
 	if enrollment.EnrollmentStatus == "" {
 		return newInvalidIdServiceError(errors.New("enrollment status is required"), "enrollment status")
+	}
+	if !slices.Contains(models.AllEnrollmentStatuses, enrollment.EnrollmentStatus) {
+		return newBadRequestServiceError(errors.New("unknown enrollment status"), "enrollment status")
 	}
 	class, err := srv.store.GetCohortByID(classId)
 	if err != nil {

@@ -339,7 +339,7 @@ const (
 	EnrollmentIncompleteWithdrawn        ProgramEnrollmentStatus = "Incomplete: Withdrawn"
 	EnrollmentIncompleteDropped          ProgramEnrollmentStatus = "Incomplete: Dropped"
 	EnrollmentIncompleteFailedToComplete ProgramEnrollmentStatus = "Incomplete: Failed to Complete"
-	EnrollmentIncompleteTransfered       ProgramEnrollmentStatus = "Incomplete: Transfered"
+	EnrollmentIncompleteTransferred      ProgramEnrollmentStatus = "Incomplete: Transferred"
 	EnrollmentIncompleteSegregated       ProgramEnrollmentStatus = "Incomplete: Segregated"
 )
 
@@ -353,7 +353,7 @@ var AllEnrollmentStatuses = []ProgramEnrollmentStatus{
 	EnrollmentIncompleteWithdrawn,
 	EnrollmentIncompleteDropped,
 	EnrollmentIncompleteFailedToComplete,
-	EnrollmentIncompleteTransfered,
+	EnrollmentIncompleteTransferred,
 	EnrollmentIncompleteSegregated,
 }
 
